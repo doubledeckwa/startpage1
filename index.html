@@ -6,25 +6,13 @@
 <title>~</title>
 
 <style>
-  @font-face {
-    font-family: 'SpaceGrotesk';
-    font-style: normal;
-    font-weight: normal;
-    src: url('./fonts/SpaceGrotesk-Regular.woff2') format('woff2');
-  }
-
-  @font-face {
-    font-family: 'SpaceGrotesk';
-    font-style: normal;
-    font-weight: bold;
-    src: url('./fonts/SpaceGrotesk-Bold.woff2') format('woff2');
-  }
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap');
 
   :root {
     --color-background: #111;
     --color-text-subtle: #888;
     --color-text: #eee;
-    --font-family: SpaceGrotesk, -apple-system, Helvetica, sans-serif;
+    --font-family: 'IBM Plex Mono', monospace;
     --font-size: clamp(16px, 1.5vw, 18px);
     --transition-speed: 200ms;
   }
@@ -42,7 +30,7 @@
   const CONFIG = {
     commandPathDelimiter: '/',
     commandSearchDelimiter: ' ',
-    defaultSearchTemplate: 'https://duckduckgo.com/?q={}',
+    defaultSearchTemplate: 'https://www.google.com/search?q={}',
     openLinksInNewTab: true,
     suggestionLimit: 4,
   };
@@ -335,14 +323,16 @@
       return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     }
 
-    static #fetchDuckDuckGoSuggestions(search) {
+    static #fetchGoogleSuggestions(search) {
       return new Promise((resolve) => {
-        window.autocompleteCallback = (res) => {
+        window.googleSuggestCallback = (res) => {
           const suggestions = [];
-
-          for (const item of res) {
-            if (item.phrase === search.toLowerCase()) continue;
-            suggestions.push(item.phrase);
+          
+          if (res && res[1]) {
+            for (const item of res[1]) {
+              if (item[0] === search.toLowerCase()) continue;
+              suggestions.push(item[0]);
+            }
           }
 
           resolve(suggestions);
@@ -350,7 +340,7 @@
 
         const script = document.createElement('script');
         document.querySelector('head').appendChild(script);
-        script.src = `https://duckduckgo.com/ac/?callback=autocompleteCallback&q=${search}`;
+        script.src = `https://www.google.com/complete/search?client=chrome&q=${encodeURIComponent(search)}&callback=googleSuggestCallback`;
         script.onload = script.remove;
       });
     }
@@ -447,7 +437,7 @@
         oq.search?.length > 1 &&
         suggestions.length < CONFIG.suggestionLimit
       ) {
-        const res = await Search.#fetchDuckDuckGoSuggestions(oq.search);
+        const res = await Search.#fetchGoogleSuggestions(oq.search);
 
         suggestions = suggestions
           .concat(
@@ -469,8 +459,6 @@
         this.#input.focus();
 
         requestAnimationFrame(() => {
-          // close the search dialog before the next repaint if a character is
-          // not produced (e.g. if you type shift, control, alt etc.)
           if (!this.#input.value) this.#close();
         });
 
